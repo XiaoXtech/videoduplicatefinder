@@ -1,0 +1,63 @@
+name: Build releases
+
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    
+jobs:
+  build:
+
+    strategy:
+      matrix:
+        kind: ['windows']
+        include:
+          - kind: windows
+            os: windows-latest
+            target: win-x64
+            name: win-x64
+            
+            
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+    - name: Declare some variables
+      id: vars
+      shell: bash
+      run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+    - name: Build
+      shell: bash
+      run: |
+          release_name="App-${{ matrix.target }}"
+          # Add nuget sources
+          dotnet nuget add source https://www.myget.org/F/sixlabors/api/v3/index.json
+          # Build everything
+            dotnet publish ./VDF.GUI/VDF.GUI.csproj -c Release -v q --self-contained -r "${{ matrix.target }}" -o "outputFolder"
+          # Pack files
+          if [ "${{ matrix.target }}" == "win-x64" ]; then
+            # Pack to zip for Windows
+            7z a -tzip "${release_name}.zip" "./outputFolder/*"
+          else
+            tar czvf "${release_name}.tar.gz" "outputFolder"
+          fi
+          # Delete output directory
+          rm -r "outputFolder"
+          
+    - name: Publish
+      uses: softprops/action-gh-release@v2
+      with:
+          tag_name: 3.0.x
+          files: App*
+          body: |
+            Note: These are daily builds. Attachments are automatically created and replaced on every new commit. Regardless of what the message above says. If you experience upgrade issues you may need to delete your 'ScannedFiles.db' file in VDF folder.
+            Last build based on ${{ steps.vars.outputs.sha_short }}
+      env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
