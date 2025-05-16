@@ -34,20 +34,15 @@ jobs:
     - name: Build
       shell: bash
       run: |
-          release_name="App-${{ matrix.target }}"
+          release_name="VideoDuplicateFinder-${{ matrix.target }}"
           # Add nuget sources
-          dotnet nuget add source https://www.myget.org/F/sixlabors/api/v3/index.json
+            dotnet nuget add source https://www.myget.org/F/sixlabors/api/v3/index.json
           # Build everything
             dotnet publish ./VDF.GUI/VDF.GUI.csproj -c Release -v q --self-contained -r "${{ matrix.target }}" -o "outputFolder"
-          # Pack files
-          if [ "${{ matrix.target }}" == "win-x64" ]; then
-            # Pack to zip for Windows
+          # Pack to zip for Windows
             7z a -tzip "${release_name}.zip" "./outputFolder/*"
-          else
-            tar czvf "${release_name}.tar.gz" "outputFolder"
-          fi
           # Delete output directory
-          rm -r "outputFolder"
+            rm -r "outputFolder"
           
     - name: Publish
       uses: softprops/action-gh-release@v2
